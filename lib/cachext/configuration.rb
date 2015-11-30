@@ -10,7 +10,8 @@ module Cachext
                   :error_logger,       # conform to Honeybadger interface
                   :default_errors,     # array of errors to catch and not reraise
                   :not_found_errors,   # array of errors where we delete the backup and reraise
-                  :max_lock_wait       # time in seconds to wait for a lock
+                  :max_lock_wait,      # time in seconds to wait for a lock
+                  :debug               # output debug messages to STDERR
 
     def initialize
       self.raise_errors = false
@@ -23,6 +24,7 @@ module Cachext
       ]
       self.default_expires_in = 60
       self.max_lock_wait = 5
+      self.debug = ENV['CACHEXT_DEBUG'] == "true"
     end
 
     def lock_manager

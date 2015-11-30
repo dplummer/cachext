@@ -15,6 +15,6 @@ class DummyErrorLogger
   end
 end
 
-Cachext.config.cache = ActiveSupport::Cache::MemoryStore.new
+Cachext.config.cache = ActiveSupport::Cache::MemCacheStore.new
 Cachext.config.redis = Redis.new
 Cachext.config.error_logger = DummyErrorLogger.new

@@ -24,6 +24,7 @@ Gem::Specification.new do |spec|
   spec.add_dependency "redis-namespace"
   spec.add_dependency "redlock"
   spec.add_dependency "faraday"
+  spec.add_dependency "dalli"
 
   spec.add_development_dependency "bundler", "~> 1.10"
   spec.add_development_dependency "rake", "~> 10.0"
