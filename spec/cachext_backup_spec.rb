@@ -6,34 +6,19 @@ describe Cachext, "backups" do
   let(:cache) { Cachext.config.cache }
   let(:error_logger) { Cachext.config.error_logger }
 
+  before do
+    Cachext.flush
+  end
+
   describe "fetch" do
     let(:key) { [:test, 1] }
     let(:backup_key) { Cachext.backup_key key }
 
-    before do
-      cache.delete key
-      cache.delete backup_key
-    end
-
     context "no cache" do
-      it "returns the value of the block" do
-        expect(Cachext.fetch(key, expires_in: 1.minute) { "abc" }).to eq("abc")
-      end
-
-      it "writes the value of the block to the cache" do
-        Cachext.fetch(key, expires_in: 1.minute) { "abc" }
-        expect(cache.read(key)).to eq("abc")
-      end
 
       it "writes the value of the block to the backup" do
         Cachext.fetch(key, expires_in: 1.minute) { "abc" }
         expect(cache.read(backup_key)).to eq("abc")
-      end
-
-      it "only executes the block once" do
-        obj = double("Thing")
-        allow(obj).to receive(:foo).once.and_return("bar")
-        Cachext.fetch(key, expires_in: 1.minute) { obj.foo }
       end
 
       context "error occurs for an error that is specified to be caught" do
