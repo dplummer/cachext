@@ -3,8 +3,8 @@ require 'spec_helper'
 FooError = Class.new(StandardError)
 
 describe Cachext, "backups" do
-  let(:cache) { Cachext.cache }
-  let(:error_logger) { Cachext.error_logger }
+  let(:cache) { Cachext.config.cache }
+  let(:error_logger) { Cachext.config.error_logger }
 
   describe "fetch" do
     let(:key) { [:test, 1] }
