@@ -21,7 +21,7 @@ module Cachext
 
       start_time = Time.now
 
-      until lock_info = @config.lock_manager.lock(digest(key), heartbeat_expires * 1000)
+      until lock_info = @config.lock_manager.lock(digest(key), (heartbeat_expires * 1000).ceil)
         sleep rand
         if Time.now - start_time > @config.max_lock_wait
           raise TimeoutWaitingForLock
@@ -71,7 +71,7 @@ module Cachext
           break if done
           sleep heartbeat_frequency
           break if done
-          @config.lock_manager.lock lock_key, heartbeat_expires * 1000, extend: lock_info
+          @config.lock_manager.lock lock_key, (heartbeat_expires * 1000).ceil, extend: lock_info
         end
       end
 

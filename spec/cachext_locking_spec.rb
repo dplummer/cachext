@@ -3,6 +3,8 @@ require 'spec_helper'
 require 'set'
 $clicking = Set.new
 class Bar
+  AlreadyClickedError = Class.new(StandardError)
+
   def initialize(id)
     @id = id
     @count = 0
@@ -15,10 +17,10 @@ class Bar
   def unsafe_click
     Thread.exclusive do
       # puts "clicking bar #{@id} - #{$clicking.to_a} - #{$clicking.include?(@id)} - #{@id == $clicking.to_a[0]}"
-      raise "somebody already clicking Bar #{@id}" if $clicking.include?(@id)
+      raise AlreadyClickedError, "somebody already clicking Bar #{@id}" if $clicking.include?(@id)
       $clicking << @id
     end
-    sleep 1
+    sleep 0.01
     @count += 1
     $clicking.delete @id
     @count
@@ -32,7 +34,7 @@ class Bar
 
   def slow_click
     Cachext.fetch key do
-      sleep 1
+      sleep 0.01
     end
   end
 end
@@ -47,7 +49,7 @@ class Sleeper
   end
 
   def poke
-    Cachext.fetch(key, heartbeat_expires: 2) do
+    Cachext.fetch(key, heartbeat_expires: 0.05) do
       sleep
     end
   end
@@ -70,7 +72,7 @@ describe Cachext, "locking" do
     expect do
       a.join
       b.join
-    end.to raise_error(/somebody/)
+    end.to raise_error(Bar::AlreadyClickedError)
   end
 
   it "will raise an error without locking when using a threadpool" do
@@ -84,7 +86,7 @@ describe Cachext, "locking" do
         bar.unsafe_click
       end
       pool.shutdown
-    end.to raise_error(/somebody/)
+    end.to raise_error(Bar::AlreadyClickedError)
   end
 
   it "doesn't blow up if you lock it (simple thread)" do
@@ -115,7 +117,7 @@ describe Cachext, "locking" do
     Thread::Pool.abort_on_exception = true
     begin
       old_max = Cachext.config.max_lock_wait
-      Cachext.config.max_lock_wait = 0.5
+      Cachext.config.max_lock_wait = 0.2
       expect do
         pool.process do
           bar.slow_click
@@ -130,21 +132,23 @@ describe Cachext, "locking" do
     end
   end
 
-  it 'unlocks if a process dies' do
-    child = nil
-    begin
-      sleeper = Sleeper.new
-      child = fork do
-        sleeper.poke
+  context "process dies" do
+    it "unlocks" do
+      child = nil
+      begin
+        sleeper = Sleeper.new
+        child = fork do
+          sleeper.poke
+        end
+        sleep 0.01
+        expect(Cachext.locked? sleeper.key).to eq(true)  # the other process has it
+        Process.kill 'KILL', child
+        expect(Cachext.locked? sleeper.key).to eq(true)  # the other (dead) process still has it
+        sleep 0.05
+        expect(Cachext.locked? sleeper.key).to eq(false) # but now it should be cleared because no heartbeat
+      ensure
+        Process.kill('KILL', child) rescue Errno::ESRCH
       end
-      sleep 0.1
-      expect(Cachext.locked? sleeper.key).to eq(true)  # the other process has it
-      Process.kill 'KILL', child
-      expect(Cachext.locked? sleeper.key).to eq(true)  # the other (dead) process still has it
-      sleep 2
-      expect(Cachext.locked? sleeper.key).to eq(false) # but now it should be cleared because no heartbeat
-    ensure
-      Process.kill('KILL', child) rescue Errno::ESRCH
     end
   end
 
@@ -155,13 +159,13 @@ describe Cachext, "locking" do
       child = fork do
         sleeper.poke
       end
-      sleep 0.1
+      sleep 0.01
       expect(Cachext.locked? sleeper.key).to eq(true) # the other process has it
-      sleep 2
+      sleep 0.05
       expect(Cachext.locked? sleeper.key).to eq(true) # the other process still has it
-      sleep 2
+      sleep 0.05
       expect(Cachext.locked? sleeper.key).to eq(true) # the other process still has it
-      sleep 2
+      sleep 0.05
       expect(Cachext.locked? sleeper.key).to eq(true) # the other process still has it
     ensure
       Process.kill('TERM', child) rescue Errno::ESRCH
