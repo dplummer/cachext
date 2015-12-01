@@ -2,7 +2,7 @@ require 'spec_helper'
 
 FooError = Class.new(StandardError)
 
-describe Cachext, "backups" do
+describe Cachext::Features::Backup do
   let(:cache) { Cachext.config.cache }
   let(:error_logger) { Cachext.config.error_logger }
 

@@ -5,6 +5,7 @@ module Cachext
     TimeoutWaitingForLock = Class.new(StandardError)
 
     prepend Features::DebugLogging
+    prepend Features::Backup
     prepend Features::Default
 
     def initialize config
@@ -41,14 +42,12 @@ module Cachext
     private
 
     def handle_not_found key, options, error
-      key.delete_backup
       raise if options.reraise_errors
     end
 
     def handle_error key, options, error
       @config.error_logger.error error
       raise if @config.raise_errors && reraise_errors
-      key.read_backup
     end
 
     def with_heartbeat_extender(lock_key, heartbeat_expires, lock_info, &block)
@@ -75,7 +74,6 @@ module Cachext
 
     def write key, fresh, options
       key.write fresh, expires_in: options.expires_in
-      key.write_backup fresh
     end
 
     def obtain_lock key, options
