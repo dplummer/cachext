@@ -8,7 +8,7 @@ module Cachext
     end
 
     def inspect
-      "#<Cachext::Key:#{object_id} @raw=#{@raw.inspect} digest=#{digest}>"
+      "#<Cachext::Key:#{object_id.to_s(16)} @raw=#{@raw.inspect} digest=#{digest}>"
     end
 
     def digest
