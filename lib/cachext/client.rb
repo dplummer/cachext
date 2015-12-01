@@ -4,39 +4,29 @@ module Cachext
   class Client
     TimeoutWaitingForLock = Class.new(StandardError)
 
+    prepend Features::DebugLogging
     prepend Features::Default
 
-    def initialize(config)
+    def initialize config
       @config = config
     end
 
     def fetch key, options_hash, &block
       options = Options.new @config, options_hash
 
-      retval = key.read
-      debug_log { { s: 1, key: key, retval: retval } }
+      retval = read key
       return retval unless retval.nil?
 
-      start_time = Time.now
+      lock_info = obtain_lock key, options
 
-      until lock_info = @config.lock_manager.lock(key.digest, (options.heartbeat_expires * 1000).ceil)
-        debug_log { { s: 2, key: key, msg: "Waiting for lock" } }
-        sleep rand
-        if Time.now - start_time > @config.max_lock_wait
-          raise TimeoutWaitingForLock
-        end
-      end
-
-      retval = key.read
-      debug_log { { s: 3, key: key, retval: retval }.merge(lock_info) }
+      retval = read key, lock_info
       return retval unless retval.nil?
 
       begin
         fresh = with_heartbeat_extender(key.digest, options.heartbeat_expires, lock_info, &block)
 
-        key.write fresh, expires_in: options.expires_in
-        debug_log { { s: 4, key: key, fresh: fresh, expires_in: options.expires_in, read: key.read } }
-        key.write_backup fresh
+        write key, fresh, options
+
         fresh
       ensure
         @config.lock_manager.unlock lock_info
@@ -51,13 +41,11 @@ module Cachext
     private
 
     def handle_not_found key, options, error
-      debug_log { { m: :handle_not_found, key: key, error: error, reraise_errors: options.reraise_errors } }
       key.delete_backup
       raise if options.reraise_errors
     end
 
     def handle_error key, options, error
-      debug_log { { m: :handle_error, key: key, error: error } }
       @config.error_logger.error error
       raise if @config.raise_errors && reraise_errors
       key.read_backup
@@ -81,13 +69,29 @@ module Cachext
       done = true
     end
 
-    def debug_log
-      if @config.debug
-        Thread.exclusive do
-          log = yield
-          msg = log.is_a?(String) ? log : log.inspect
-          $stderr.puts "[#{Time.now.to_s(:db)}] [#{Process.pid} #{Thread.current.object_id.to_s(16)}] #{msg}"
-        end
+    def read key, _lock_info = {}
+      key.read
+    end
+
+    def write key, fresh, options
+      key.write fresh, expires_in: options.expires_in
+      key.write_backup fresh
+    end
+
+    def obtain_lock key, options
+      start_time = Time.now
+
+      until lock_info = @config.lock_manager.lock(key.digest, (options.heartbeat_expires * 1000).ceil)
+        wait_for_lock key, start_time
+      end
+
+      lock_info
+    end
+
+    def wait_for_lock key, start_time
+      sleep rand
+      if Time.now - start_time > @config.max_lock_wait
+        raise TimeoutWaitingForLock
       end
     end
   end
