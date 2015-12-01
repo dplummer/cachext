@@ -33,6 +33,9 @@ release a new version, update the version number in `version.rb`, and then run
 git commits and tags, and push the `.gem` file to
 [rubygems.org](https://rubygems.org).
 
+Having trouble with a test? Set the `CACHEXT_DEBUG` environmental variable to
+"true" to get debug logs.
+
 ## Contributing
 
 Bug reports and pull requests are welcome on GitHub at
