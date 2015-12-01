@@ -1,4 +1,6 @@
 require "active_support/core_ext/module/delegation"
+require "active_support/core_ext/hash/keys"
+require "active_support/core_ext/hash/reverse_merge"
 
 module Cachext
   class Multi
@@ -13,7 +15,11 @@ module Cachext
     def fetch ids, &block
       records = FindByIds.new(self, ids, block).records
 
-      records + missing_records(ids - records.map(&:id))
+      if @options.fetch(:return_array, false)
+        records.values + missing_records(ids - records.keys)
+      else
+        records
+      end
     end
 
     def key id
@@ -42,17 +48,18 @@ module Cachext
       end
 
       def records
-        fresh_cached + direct + stale
+        fresh_cached.merge(direct).reverse_merge(stale)
       end
 
       private
 
       def fresh_cached
-        @fresh_cached ||= cache.read_multi(*ids.map { |id| multi.key(id) }).values
+        @fresh_cached ||= cache.read_multi(*ids.map { |id| multi.key(id) }).
+          transform_keys { |key| key.last }
       end
 
       def uncached_or_stale_ids
-        ids - fresh_cached.map(&:id)
+        ids - fresh_cached.keys
       end
 
       def direct
@@ -61,27 +68,39 @@ module Cachext
           write_cache records
           records
         else
-          []
+          {}
         end
       end
 
       def write_cache records
-        records.each do |record|
-          key = Key.new(multi.key(record.id))
+        records.each do |id, record|
+          key = Key.new(multi.key(id))
           key.write record, expires_in: multi.expires_in
           key.write_backup record
         end
       end
 
+      def delete_backups ids
+        return if ids.blank?
+
+        ids.each do |id|
+          key = Key.new(multi.key(id))
+          key.delete_backup
+        end
+      end
+
       def stale
-        cache.read_multi(*(uncached_or_stale_ids - direct.map(&:id)).map { |id| [:backup_cache] + multi.key(id) }).values
+        cache.read_multi(*(uncached_or_stale_ids - direct.keys).map { |id| [:backup_cache] + multi.key(id) }).
+          transform_keys { |key| key.last }
       end
 
       def uncached_where ids
-        @lookup.call ids
+        records = @lookup.call ids
+        delete_backups ids - records.keys
+        records
       rescue *multi.default_errors => e
         multi.error_logger.error e
-        []
+        {}
       end
     end
   end

@@ -2,12 +2,6 @@ require "spec_helper"
 
 Record = Struct.new :id
 
-class Multirepo
-  def self.where(params)
-    params.fetch(:id).reject {|id| id == 404}.map { |id| Record.new id }
-  end
-end
-
 describe Cachext do
   describe ".multi" do
     it "delegates to Multi" do
@@ -16,8 +10,9 @@ describe Cachext do
       expect(Cachext::Multi).to receive(:new).
         with(Cachext.config, ["Multirepo"], expires_in: 20).
         and_return(multi)
+
       Cachext.multi ["Multirepo"], [1,2,3], expires_in: 20 do |ids|
-        Multirepo.where id: ids, per_page: ids.length
+        ids.inject({}) { |acc,id| acc.merge(id => Record.new(id)) }
       end
     end
   end
@@ -32,86 +27,117 @@ describe Cachext::Multi do
     Cachext.flush
   end
 
-  it "looks up records from the repo" do
-    expect(Multirepo).to receive(:where).with(id: [1,2,3], per_page: 3).and_call_original
-    subject.fetch [1,2,3] do |ids|
-      Multirepo.where id: ids, per_page: ids.length
-    end
+  it "returns the found records" do
+    expect(subject.fetch [1,2,3] { |ids|
+      ids.inject({}) { |acc,id| acc.merge(id => Record.new(id)) }
+    }).to eq({ 1 => Record.new(1), 2 => Record.new(2), 3 => Record.new(3) })
   end
 
   it "records the results in the cache" do
-    expect(Multirepo).to receive(:where).with(id: [1,2,3], per_page: 3).once.and_call_original
     subject.fetch [1,2,3] do |ids|
-      Multirepo.where id: ids, per_page: ids.length
+      ids.inject({}) { |acc,id| acc.merge(id => Record.new(id)) }
     end
-    subject.fetch [1,2,3] do |ids|
-      Multirepo.where id: ids, per_page: ids.length
-    end
-  end
 
-  it "returns the found records" do
-    expect(subject.fetch [1,2,3] { |ids|
-      Multirepo.where id: ids, per_page: ids.length
-    }).to eq([Record.new(1), Record.new(2), Record.new(3)])
+    subject.fetch [1,2,3] do |ids|
+      raise "all the values should be cached"
+    end
   end
 
   it "caches records independently" do
-    expect(Multirepo).to receive(:where).with(id: [1,2], per_page: 2).once.and_call_original
-    expect(Multirepo).to receive(:where).with(id: [3], per_page: 1).once.and_call_original
     subject.fetch [1,2] do |ids|
-      Multirepo.where id: ids, per_page: ids.length
+      expect(ids).to eq([1,2])
+      ids.inject({}) { |acc,id| acc.merge(id => Record.new(id)) }
     end
     subject.fetch [2,3] do |ids|
-      Multirepo.where id: ids, per_page: ids.length
+      expect(ids).to eq([3])
+      ids.inject({}) { |acc,id| acc.merge(id => Record.new(id)) }
     end
   end
 
-  it "returns missing record objects when the object is not returned" do
-    expect(subject.fetch [1,404] { |ids| Multirepo.where id: ids, per_page: ids.length }).
-      to eq([Record.new(1), Cachext::MissingRecord.new(404)])
+  it "doesn't include the key if the record wasn't found" do
+    expect(subject.fetch [1,404] { |ids|
+      {1 => Record.new(1)}
+    }).to eq(1 => Record.new(1))
   end
 
   it "expires the cache" do
-    expect(Multirepo).to receive(:where).with(id: [1,2,3], per_page: 3).twice.and_call_original
+    called = 0
     subject.fetch [1,2,3] do |ids|
-      Multirepo.where id: ids, per_page: ids.length
+      called += 1
+      expect(ids).to eq([1,2,3])
+      ids.inject({}) { |acc,id| acc.merge(id => Record.new(id)) }
     end
     sleep 0.3
     subject.fetch [1,2,3] do |ids|
-      Multirepo.where id: ids, per_page: ids.length
+      called += 1
+      expect(ids).to eq([1,2,3])
+      ids.inject({}) { |acc,id| acc.merge(id => Record.new(id)) }
     end
+    expect(called).to eq(2)
   end
 
   context "a backup exists" do
     let(:backup_record) { Record.new 500 }
+    let(:backup_key) { [:backup_cache, "Multirepo", 500] }
 
     before do
-      config.cache.write [:backup_cache, "Multirepo", 500], backup_record
+      config.cache.write backup_key, backup_record
     end
 
-    context "an error is raised" do
+    context "an error is raised that we catch" do
       let(:error) { Faraday::Error::ConnectionFailed.new(double) }
 
       it "uses the backup when the repo raises an error" do
-        allow(Multirepo).to receive(:where).and_raise(error)
+        expect(subject.fetch [500] { |ids| raise error }).to eq({ 500 => backup_record })
+      end
+    end
 
-        expect(subject.fetch [500] { |ids|
-          Multirepo.where id: ids, per_page: ids.length
-        }).to eq([backup_record])
+    context "no record is returned for an id we requested" do
+      let(:backup_key) { [:backup_cache, "Multirepo", 404] }
+
+      it "deletes the backup" do
+        subject.fetch [1,404] { |ids| {1 => Record.new(1)} }
+        expect(config.cache.read backup_key).to be_nil
+      end
+
+      it "does not return a record for the missing id" do
+        expect(subject.fetch [1,404] { |ids|
+          {1 => Record.new(1)}
+        }).to eq(1 => Record.new(1))
       end
     end
   end
 
   context "no backup exists" do
-    context "an error is raised" do
+    context "an error is raised that we catch" do
       let(:error) { Faraday::Error::ConnectionFailed.new(double) }
 
-      it "uses the backup when the repo raises an error" do
-        allow(Multirepo).to receive(:where).and_raise(error)
-
+      it "doesn't include the id and returns nothing" do
         expect(subject.fetch [500] { |ids|
-          Multirepo.where id: ids, per_page: ids.length
-        }).to eq([Cachext::MissingRecord.new(500)])
+          raise error
+        }).to eq({})
+      end
+    end
+  end
+
+  context "options specify returning an array of values" do
+    subject { Cachext::Multi.new config, key_base, return_array: true }
+
+    it "returns missing record objects when the object is not returned" do
+      expect(subject.fetch [1,404] { |ids|
+        {1 => Record.new(1)}
+      }).to eq([Record.new(1), Cachext::MissingRecord.new(404)])
+    end
+
+    context "no backup exists" do
+      context "an error is raised" do
+        let(:error) { Faraday::Error::ConnectionFailed.new(double) }
+
+        it "returns a missing record" do
+          expect(subject.fetch [500] { |ids|
+            raise error
+          }).to eq([Cachext::MissingRecord.new(500)])
+        end
       end
     end
   end
