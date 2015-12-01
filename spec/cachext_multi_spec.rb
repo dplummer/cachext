@@ -8,9 +8,22 @@ class Multirepo
   end
 end
 
+describe Cachext do
+  describe ".multi" do
+    it "delegates to Multi" do
+      multi = double("Cachext::Multi")
+      expect(multi).to receive(:fetch).with([1,2,3])
+      expect(Cachext::Multi).to receive(:new).
+        with(Cachext.config, Multirepo, expires_in: 20).
+        and_return(multi)
+      Cachext.multi Multirepo, [1,2,3], expires_in: 20
+    end
+  end
+end
+
 describe Cachext::Multi do
   let(:config) { Cachext.config }
-  subject { Cachext::Multi.new config, Multirepo }
+  subject { Cachext::Multi.new config, Multirepo, expires_in: 0.1 }
 
   before do
     Cachext.flush
@@ -40,6 +53,13 @@ describe Cachext::Multi do
 
   it "returns missing record objects when the object is not returned" do
     expect(subject.fetch [1,404]).to eq([Record.new(1), Cachext::MissingRecord.new(404)])
+  end
+
+  it "expires the cache" do
+    expect(Multirepo).to receive(:where).with(id: [1,2,3], per_page: 3).twice.and_call_original
+    subject.fetch [1,2,3]
+    sleep 0.3
+    subject.fetch [1,2,3]
   end
 
   context "a backup exists" do
