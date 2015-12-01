@@ -4,8 +4,10 @@ require "faraday/error"
 module Cachext
   autoload :Client, "cachext/client"
   autoload :Configuration, "cachext/configuration"
-  autoload :Key, "cachext/key"
   autoload :Features, "cachext/features"
+  autoload :Key, "cachext/key"
+  autoload :MissingRecord, "cachext/missing_record"
+  autoload :Multi, "cachext/multi"
   autoload :Options, "cachext/options"
 
   def self.Key raw_key
