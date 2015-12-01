@@ -14,18 +14,10 @@ module Cachext
     def fetch key, options_hash, &block
       options = Options.new @config, options_hash
 
-      retval = read key
+      retval = read key, options
       return retval unless retval.nil?
 
-      lock_info = obtain_lock key, options
-
-      retval = read key, lock_info
-      if !retval.nil?
-        @config.lock_manager.unlock lock_info
-        return retval
-      end
-
-      call_block key, options, lock_info, &block
+      call_block key, options, &block
 
     rescue *Array(options.not_found_error) => e
       handle_not_found key, options, e
@@ -35,7 +27,7 @@ module Cachext
 
     private
 
-    def call_block key, options, lock_info, &block
+    def call_block key, options, &block
       fresh = block.call
 
       write key, fresh, options
@@ -52,7 +44,7 @@ module Cachext
       raise if @config.raise_errors && reraise_errors
     end
 
-    def read key, _lock_info = {}
+    def read key, options
       key.read
     end
 

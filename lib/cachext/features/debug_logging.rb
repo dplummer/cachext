@@ -4,9 +4,9 @@ module Cachext
 
       private
 
-      def read key, lock_info = {}
+      def read key, options
         retval = super
-        debug_log { { m: :read, key: key, retval: retval }.merge(lock_info) }
+        debug_log { { m: :read, key: key, retval: retval } }
         retval
       end
 
