@@ -5,6 +5,8 @@ module Cachext
   autoload :Client, "cachext/client"
   autoload :Configuration, "cachext/configuration"
   autoload :Key, "cachext/key"
+  autoload :Features, "cachext/features"
+  autoload :Options, "cachext/options"
 
   def self.Key raw_key
     raw_key.is_a?(Key) ? raw_key : Key.new(raw_key)

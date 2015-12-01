@@ -121,7 +121,7 @@ describe Cachext, "backups" do
           expect(cache.read(backup_key)).to be_nil
         end
 
-        it "reraises the error " do
+        it "reraises the error" do
           expect { Cachext.fetch(key, expires_in: 1.minute) { raise error } }.
             to raise_error(error)
         end
