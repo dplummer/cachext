@@ -11,7 +11,8 @@ module Cachext
                   :default_errors,     # array of errors to catch and not reraise
                   :not_found_errors,   # array of errors where we delete the backup and reraise
                   :max_lock_wait,      # time in seconds to wait for a lock
-                  :debug               # output debug messages to STDERR
+                  :debug,              # output debug messages to STDERR
+                  :heartbeat_expires   # time in seconds for process heardbeat to expire
 
     def initialize
       self.raise_errors = false
@@ -25,6 +26,7 @@ module Cachext
       self.default_expires_in = 60
       self.max_lock_wait = 5
       self.debug = ENV['CACHEXT_DEBUG'] == "true"
+      self.heartbeat_expires = 2
     end
 
     def lock_manager

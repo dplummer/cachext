@@ -20,19 +20,41 @@ module Cachext
     end
 
     def locked?
-      @config.lock_redis.exists digest
+      lock_redis.exists digest
     end
 
     def read
-      @config.cache.read raw
+      cache.read raw
     end
 
     def write value, options = {}
-      @config.cache.write raw, value, options
+      cache.write raw, value, options
     end
 
     def clear
-      @config.cache.delete raw
+      cache.delete raw
+    end
+
+    def read_backup
+      cache.read backup
+    end
+
+    def write_backup value
+      cache.write backup, value
+    end
+
+    def delete_backup
+      cache.delete backup
+    end
+
+    private
+
+    def cache
+      @config.cache
+    end
+
+    def lock_redis
+      @config.lock_redis
     end
   end
 end
