@@ -3,17 +3,15 @@ require "active_support/core_ext/module/delegation"
 module Cachext
   class Multi
     delegate :cache, :default_errors, :error_logger, to: :@config
-    delegate :where, to: :@client_klass
 
-    def initialize config, client_klass, options = {}
+    def initialize config, key_base, options = {}
       @config = config
-      @client_klass = client_klass
-      @key_base = client_klass.to_s.split("::")
+      @key_base = key_base
       @options = options
     end
 
-    def fetch ids
-      records = FindByIds.new(self, ids).records
+    def fetch ids, &block
+      records = FindByIds.new(self, ids, block).records
 
       records + missing_records(ids - records.map(&:id))
     end
@@ -37,9 +35,10 @@ module Cachext
 
       delegate :cache, to: :multi
 
-      def initialize(multi, ids)
+      def initialize(multi, ids, lookup)
         @multi = multi
         @ids = ids
+        @lookup = lookup
       end
 
       def records
@@ -58,7 +57,7 @@ module Cachext
 
       def direct
         @direct ||= if uncached_or_stale_ids.length > 0
-          records = uncached_where id: uncached_or_stale_ids, per_page: uncached_or_stale_ids.length
+          records = uncached_where uncached_or_stale_ids
           write_cache records
           records
         else
@@ -78,8 +77,8 @@ module Cachext
         cache.read_multi(*(uncached_or_stale_ids - direct.map(&:id)).map { |id| [:backup_cache] + multi.key(id) }).values
       end
 
-      def uncached_where params
-        multi.where(params)
+      def uncached_where ids
+        @lookup.call ids
       rescue *multi.default_errors => e
         multi.error_logger.error e
         []

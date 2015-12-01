@@ -14,16 +14,19 @@ describe Cachext do
       multi = double("Cachext::Multi")
       expect(multi).to receive(:fetch).with([1,2,3])
       expect(Cachext::Multi).to receive(:new).
-        with(Cachext.config, Multirepo, expires_in: 20).
+        with(Cachext.config, ["Multirepo"], expires_in: 20).
         and_return(multi)
-      Cachext.multi Multirepo, [1,2,3], expires_in: 20
+      Cachext.multi ["Multirepo"], [1,2,3], expires_in: 20 do |ids|
+        Multirepo.where id: ids, per_page: ids.length
+      end
     end
   end
 end
 
 describe Cachext::Multi do
   let(:config) { Cachext.config }
-  subject { Cachext::Multi.new config, Multirepo, expires_in: 0.1 }
+  let(:key_base) { ["Multirepo"] }
+  subject { Cachext::Multi.new config, key_base, expires_in: 0.1 }
 
   before do
     Cachext.flush
@@ -31,35 +34,52 @@ describe Cachext::Multi do
 
   it "looks up records from the repo" do
     expect(Multirepo).to receive(:where).with(id: [1,2,3], per_page: 3).and_call_original
-    subject.fetch [1,2,3]
+    subject.fetch [1,2,3] do |ids|
+      Multirepo.where id: ids, per_page: ids.length
+    end
   end
 
   it "records the results in the cache" do
     expect(Multirepo).to receive(:where).with(id: [1,2,3], per_page: 3).once.and_call_original
-    subject.fetch [1,2,3]
-    subject.fetch [1,2,3]
+    subject.fetch [1,2,3] do |ids|
+      Multirepo.where id: ids, per_page: ids.length
+    end
+    subject.fetch [1,2,3] do |ids|
+      Multirepo.where id: ids, per_page: ids.length
+    end
   end
 
   it "returns the found records" do
-    expect(subject.fetch [1,2,3]).to eq([Record.new(1), Record.new(2), Record.new(3)])
+    expect(subject.fetch [1,2,3] { |ids|
+      Multirepo.where id: ids, per_page: ids.length
+    }).to eq([Record.new(1), Record.new(2), Record.new(3)])
   end
 
   it "caches records independently" do
     expect(Multirepo).to receive(:where).with(id: [1,2], per_page: 2).once.and_call_original
     expect(Multirepo).to receive(:where).with(id: [3], per_page: 1).once.and_call_original
-    subject.fetch [1,2]
-    subject.fetch [2,3]
+    subject.fetch [1,2] do |ids|
+      Multirepo.where id: ids, per_page: ids.length
+    end
+    subject.fetch [2,3] do |ids|
+      Multirepo.where id: ids, per_page: ids.length
+    end
   end
 
   it "returns missing record objects when the object is not returned" do
-    expect(subject.fetch [1,404]).to eq([Record.new(1), Cachext::MissingRecord.new(404)])
+    expect(subject.fetch [1,404] { |ids| Multirepo.where id: ids, per_page: ids.length }).
+      to eq([Record.new(1), Cachext::MissingRecord.new(404)])
   end
 
   it "expires the cache" do
     expect(Multirepo).to receive(:where).with(id: [1,2,3], per_page: 3).twice.and_call_original
-    subject.fetch [1,2,3]
+    subject.fetch [1,2,3] do |ids|
+      Multirepo.where id: ids, per_page: ids.length
+    end
     sleep 0.3
-    subject.fetch [1,2,3]
+    subject.fetch [1,2,3] do |ids|
+      Multirepo.where id: ids, per_page: ids.length
+    end
   end
 
   context "a backup exists" do
@@ -75,7 +95,9 @@ describe Cachext::Multi do
       it "uses the backup when the repo raises an error" do
         allow(Multirepo).to receive(:where).and_raise(error)
 
-        expect(subject.fetch [500]).to eq([backup_record])
+        expect(subject.fetch [500] { |ids|
+          Multirepo.where id: ids, per_page: ids.length
+        }).to eq([backup_record])
       end
     end
   end
@@ -87,7 +109,9 @@ describe Cachext::Multi do
       it "uses the backup when the repo raises an error" do
         allow(Multirepo).to receive(:where).and_raise(error)
 
-        expect(subject.fetch [500]).to eq([Cachext::MissingRecord.new(500)])
+        expect(subject.fetch [500] { |ids|
+          Multirepo.where id: ids, per_page: ids.length
+        }).to eq([Cachext::MissingRecord.new(500)])
       end
     end
   end
