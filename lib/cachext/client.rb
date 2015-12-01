@@ -2,9 +2,8 @@ require "digest/sha1"
 
 module Cachext
   class Client
-    TimeoutWaitingForLock = Class.new(StandardError)
-
     prepend Features::DebugLogging
+    prepend Features::Lock
     prepend Features::Backup
     prepend Features::Default
 
@@ -21,25 +20,28 @@ module Cachext
       lock_info = obtain_lock key, options
 
       retval = read key, lock_info
-      return retval unless retval.nil?
-
-      begin
-        fresh = with_heartbeat_extender(key.digest, options.heartbeat_expires, lock_info, &block)
-
-        write key, fresh, options
-
-        fresh
-      ensure
+      if !retval.nil?
         @config.lock_manager.unlock lock_info
+        return retval
       end
+
+      call_block key, options, lock_info, &block
 
     rescue *Array(options.not_found_error) => e
       handle_not_found key, options, e
-    rescue TimeoutWaitingForLock, *options.errors => e
+    rescue Features::Lock::TimeoutWaitingForLock, *options.errors => e
       handle_error key, options, e
     end
 
     private
+
+    def call_block key, options, lock_info, &block
+      fresh = block.call
+
+      write key, fresh, options
+
+      fresh
+    end
 
     def handle_not_found key, options, error
       raise if options.reraise_errors
@@ -50,47 +52,12 @@ module Cachext
       raise if @config.raise_errors && reraise_errors
     end
 
-    def with_heartbeat_extender(lock_key, heartbeat_expires, lock_info, &block)
-      done = false
-      heartbeat_frequency = heartbeat_expires / 2
-
-      Thread.new do
-        loop do
-          break if done
-          sleep heartbeat_frequency
-          break if done
-          @config.lock_manager.lock lock_key, (heartbeat_expires * 1000).ceil, extend: lock_info
-        end
-      end
-
-      block.call
-    ensure
-      done = true
-    end
-
     def read key, _lock_info = {}
       key.read
     end
 
     def write key, fresh, options
       key.write fresh, expires_in: options.expires_in
-    end
-
-    def obtain_lock key, options
-      start_time = Time.now
-
-      until lock_info = @config.lock_manager.lock(key.digest, (options.heartbeat_expires * 1000).ceil)
-        wait_for_lock key, start_time
-      end
-
-      lock_info
-    end
-
-    def wait_for_lock key, start_time
-      sleep rand
-      if Time.now - start_time > @config.max_lock_wait
-        raise TimeoutWaitingForLock
-      end
     end
   end
 end

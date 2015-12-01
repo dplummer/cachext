@@ -54,7 +54,7 @@ class Sleeper
   end
 end
 
-describe Cachext, "locking" do
+describe Cachext::Features::Lock do
   before do
     Cachext.flush
   end
@@ -117,7 +117,7 @@ describe Cachext, "locking" do
     begin
       old_max = Cachext.config.max_lock_wait
       Cachext.config.max_lock_wait = 0.2
-      expect(Cachext.config.error_logger).to receive(:error).with(kind_of(Cachext::Client::TimeoutWaitingForLock))
+      expect(Cachext.config.error_logger).to receive(:error).with(kind_of(Cachext::Features::Lock::TimeoutWaitingForLock))
 
       pool.process do
         bar.slow_click
