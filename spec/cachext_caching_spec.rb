@@ -7,7 +7,7 @@ describe Cachext, "caching" do
     Cachext.flush
   end
 
-  let(:key) { [:test, 1] }
+  let(:key) { Cachext::Key.new [:test, 1] }
 
   it "returns the value of the block" do
     expect(Cachext.fetch(key) { "abc" }).to eq("abc")
@@ -15,7 +15,7 @@ describe Cachext, "caching" do
 
   it "writes the value of the block to the cache" do
     Cachext.fetch(key) { "abc" }
-    expect(cache.read(key)).to eq("abc")
+    expect(key.read).to eq("abc")
   end
 
   it "only executes the block once" do

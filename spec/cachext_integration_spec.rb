@@ -2,8 +2,8 @@ require "spec_helper"
 
 describe Cachext, "integration" do
   let(:cache)         { Cachext.config.cache }
-  let(:key)           { [:test, 1] }
-  let(:backup_key)    { Cachext.backup_key key }
+  let(:key)           { Cachext::Key.new [:test, 1] }
+  let(:backup_key)    { key.backup }
   let(:max_lock_wait) { Cachext.config.max_lock_wait }
 
   context "backup exists, service times out" do

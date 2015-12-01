@@ -33,7 +33,7 @@ class Bar
 
   def slow_click
     Cachext.fetch key do
-      sleep 0.01
+      sleep 1
     end
   end
 end
@@ -132,44 +132,45 @@ describe Cachext, "locking" do
   end
 
   context "process dies" do
+    let!(:sleeper) { Sleeper.new }
+    let(:key) { Cachext::Key.new(sleeper.key) }
+
     it "unlocks" do
       child = nil
       begin
-        sleeper = Sleeper.new
         child = fork do
           Cachext.config.cache = ActiveSupport::Cache::MemCacheStore.new
           sleeper.poke
         end
         sleep 0.1
-        expect(Cachext.locked? sleeper.key).to eq(true)  # the other process has it
+        expect(key).to be_locked  # the other process has it
         Process.kill 'KILL', child
-        expect(Cachext.locked? sleeper.key).to eq(true)  # the other (dead) process still has it
+        expect(key).to be_locked  # the other (dead) process still has it
         sleep 0.5
-        expect(Cachext.locked? sleeper.key).to eq(false) # but now it should be cleared because no heartbeat
+        expect(key).to_not be_locked # but now it should be cleared because no heartbeat
       ensure
         Process.kill('KILL', child) rescue Errno::ESRCH
       end
     end
-  end
 
-  it "pays attention to heartbeats" do
-    child = nil
-    begin
-      sleeper = Sleeper.new
-      child = fork do
-        Cachext.config.cache = ActiveSupport::Cache::MemCacheStore.new
-        sleeper.poke
+    it "pays attention to heartbeats" do
+      child = nil
+      begin
+        child = fork do
+          Cachext.config.cache = ActiveSupport::Cache::MemCacheStore.new
+          sleeper.poke
+        end
+        sleep 0.1
+        expect(key).to be_locked # the other process has it
+        sleep 0.5
+        expect(key).to be_locked # the other process still has it
+        sleep 0.5
+        expect(key).to be_locked # the other process still has it
+        sleep 0.5
+        expect(key).to be_locked # the other process still has it
+      ensure
+        Process.kill('TERM', child) rescue Errno::ESRCH
       end
-      sleep 0.1
-      expect(Cachext.locked? sleeper.key).to eq(true) # the other process has it
-      sleep 0.5
-      expect(Cachext.locked? sleeper.key).to eq(true) # the other process still has it
-      sleep 0.5
-      expect(Cachext.locked? sleeper.key).to eq(true) # the other process still has it
-      sleep 0.5
-      expect(Cachext.locked? sleeper.key).to eq(true) # the other process still has it
-    ensure
-      Process.kill('TERM', child) rescue Errno::ESRCH
     end
   end
 end

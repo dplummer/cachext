@@ -16,13 +16,13 @@ module Cachext
                    heartbeat_expires: 2,
                    &block
 
-      retval = @config.cache.read key
+      retval = key.read
       debug_log { { s: 1, key: key, retval: retval } }
       return retval unless retval.nil?
 
       start_time = Time.now
 
-      until lock_info = @config.lock_manager.lock(digest(key), (heartbeat_expires * 1000).ceil)
+      until lock_info = @config.lock_manager.lock(key.digest, (heartbeat_expires * 1000).ceil)
         debug_log { { s: 2, key: key, msg: "Waiting for lock" } }
         sleep rand
         if Time.now - start_time > @config.max_lock_wait
@@ -30,15 +30,15 @@ module Cachext
         end
       end
 
-      retval = @config.cache.read key
-      debug_log { { s: 3, key: key, retval: retval } }
+      retval = key.read
+      debug_log { { s: 3, key: key, retval: retval }.merge(lock_info) }
       return retval unless retval.nil?
 
       begin
-        fresh = with_heartbeat_extender(digest(key), heartbeat_expires, lock_info, &block)
+        fresh = with_heartbeat_extender(key.digest, heartbeat_expires, lock_info, &block)
 
-        @config.cache.write key, fresh, expires_in: expires_in
-        debug_log { { s: 4, key: key, fresh: fresh, expires_in: expires_in, read: @config.cache.read(key) } }
+        key.write fresh, expires_in: expires_in
+        debug_log { { s: 4, key: key, fresh: fresh, expires_in: expires_in, read: key.read } }
         write_backup key, fresh
         fresh
       ensure
@@ -55,18 +55,6 @@ module Cachext
       @config.error_logger.error e
       raise if @config.raise_errors && reraise_errors
       read_backup(key) || (default.respond_to?(:call) ? default.call(key) : default)
-    end
-
-    def backup_key key
-      [:backup_cache] + Array(key)
-    end
-
-    def clear key
-      @config.cache.delete key
-    end
-
-    def locked? key
-      @config.lock_redis.exists digest(key)
     end
 
     private
@@ -89,31 +77,25 @@ module Cachext
       done = true
     end
 
-    def digest key
-      ::Digest::SHA1.hexdigest ::Marshal.dump(key)
-    end
-
     def delete_backup key
-      @config.cache.delete backup_key(key)
+      @config.cache.delete key.backup
     end
 
     def write_backup key, object
-      @config.cache.write backup_key(key), object
+      @config.cache.write key.backup, object
     end
 
     def read_backup key
-      @config.cache.read backup_key(key)
-    end
-
-    def read_multi_backup *keys
-      @config.cache.read_multi(*keys.map { |key| backup_key key })
+      @config.cache.read key.backup
     end
 
     def debug_log
       if @config.debug
-        log = yield
-        msg = log.is_a?(String) ? log : log.inspect
-        $stderr.puts "[#{Time.now.to_s(:db)}] #{msg}"
+        Thread.exclusive do
+          log = yield
+          msg = log.is_a?(String) ? log : log.inspect
+          $stderr.puts "[#{Time.now.to_s(:db)}] [#{Process.pid} #{Thread.current.object_id.to_s(16)}] #{msg}"
+        end
       end
     end
   end

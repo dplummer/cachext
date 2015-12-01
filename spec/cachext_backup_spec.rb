@@ -11,8 +11,8 @@ describe Cachext, "backups" do
   end
 
   describe "fetch" do
-    let(:key) { [:test, 1] }
-    let(:backup_key) { Cachext.backup_key key }
+    let(:key) { Cachext::Key.new([:test, 1]) }
+    let(:backup_key) { key.backup }
 
     context "no cache" do
 
@@ -35,7 +35,7 @@ describe Cachext, "backups" do
         end
 
         it "will call the default if its a proc" do
-          expect(Cachext.fetch(key, expires_in: 1.minute, errors: [FooError], default: ->(k) { "default#{k.length}" }) { raise error }).
+          expect(Cachext.fetch(key, expires_in: 1.minute, errors: [FooError], default: ->(k) { "default#{k.raw.length}" }) { raise error }).
             to eq("default2")
         end
       end
@@ -43,7 +43,7 @@ describe Cachext, "backups" do
 
     context "recent cache" do
       before do
-        cache.write key, "foo"
+        key.write "foo"
       end
 
       it "uses the value from the cache" do
@@ -82,7 +82,7 @@ describe Cachext, "backups" do
 
       it "writes the value of the block to the cache" do
         Cachext.fetch(key, expires_in: 1.minute) { "abc" }
-        expect(cache.read(key)).to eq("abc")
+        expect(key.read).to eq("abc")
       end
 
       it "writes the value of the block to the backup" do
