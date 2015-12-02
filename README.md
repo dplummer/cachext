@@ -1,6 +1,7 @@
 # Cachext
 
 [![Build Status](https://travis-ci.org/dplummer/cachext.svg)](https://travis-ci.org/dplummer/cachext)
+[![Gem Version](https://badge.fury.io/rb/cachext.svg)](https://badge.fury.io/rb/cachext)
 
 Extensions to normal Rails caching:
 
