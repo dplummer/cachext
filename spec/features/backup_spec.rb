@@ -25,7 +25,7 @@ describe Cachext::Features::Backup do
         let(:error) { FooError.new }
 
         it "logs the error" do
-          expect(error_logger).to receive(:error).with(error)
+          expect(error_logger).to receive(:call).with(error)
           Cachext.fetch(key, expires_in: 1.minute, errors: [FooError]) { raise error }
         end
 
@@ -60,7 +60,7 @@ describe Cachext::Features::Backup do
         let(:error) { FooError.new }
 
         it "doesn't log the error since it wasn't raised" do
-          expect(error_logger).to_not receive(:error).with(error)
+          expect(error_logger).to_not receive(:call).with(error)
           Cachext.fetch(key, expires_in: 1.minute, errors: [FooError]) { raise error }
         end
 
@@ -100,7 +100,7 @@ describe Cachext::Features::Backup do
         let(:error) { FooError.new }
 
         it "logs the error" do
-          expect(error_logger).to receive(:error).with(error)
+          expect(error_logger).to receive(:call).with(error)
           Cachext.fetch(key, expires_in: 1.minute, errors: [FooError]) { raise error }
         end
 

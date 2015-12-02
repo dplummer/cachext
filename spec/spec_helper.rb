@@ -11,7 +11,7 @@ require "redis"
 require "thread/pool"
 
 class DummyErrorLogger
-  def error(_)
+  def call(_)
   end
 end
 

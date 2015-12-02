@@ -245,7 +245,7 @@ describe Cachext::Multi do
         old_max = Cachext.config.max_lock_wait
         Cachext.config.max_lock_wait = 0.2
         expect(Cachext.config.error_logger).
-          to receive(:error).with(kind_of(Cachext::Features::Lock::TimeoutWaitingForLock)).
+          to receive(:call).with(kind_of(Cachext::Features::Lock::TimeoutWaitingForLock)).
           twice
 
         pool.process do

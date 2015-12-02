@@ -36,5 +36,9 @@ module Cachext
     def lock_redis
       @lock_redis ||= Redis::Namespace.new :cachext, redis: redis
     end
+
+    def log_errors?
+      error_logger.present?
+    end
   end
 end

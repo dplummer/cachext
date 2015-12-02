@@ -107,6 +107,12 @@ Cachext.config.heartbeat_expires = 2 # in seconds
 If a process that holds a lock crashes, other processes will have to wait this
 many seconds for the lock to expire.
 
+```ruby
+Cachext.config.error_logger = nil
+```
+
+If set to an object that responds to call, will `call` with any errors caught.
+
 ## Usage
 
 ```ruby

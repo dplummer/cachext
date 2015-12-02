@@ -40,7 +40,7 @@ module Cachext
     end
 
     def handle_error key, options, error
-      @config.error_logger.error error
+      @config.error_logger.call error if @config.log_errors?
       raise if @config.raise_errors && reraise_errors
     end
 

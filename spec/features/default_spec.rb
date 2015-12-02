@@ -4,7 +4,6 @@ FooError = Class.new(StandardError)
 
 describe Cachext::Features::Default do
   let(:cache) { Cachext.config.cache }
-  let(:error_logger) { Cachext.config.error_logger }
 
   before do
     Cachext.flush

@@ -78,7 +78,7 @@ module Cachext
           {}
         end
       rescue Features::Lock::TimeoutWaitingForLock => e
-        config.error_logger.error e
+        config.error_logger.call e if config.log_errors?
         {}
       end
 
@@ -145,7 +145,7 @@ module Cachext
           records
         end
       rescue *config.default_errors => e
-        config.error_logger.error e
+        config.error_logger.call e if config.log_errors?
         {}
       end
 
