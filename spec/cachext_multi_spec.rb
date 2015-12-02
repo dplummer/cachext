@@ -5,15 +5,13 @@ Record = Struct.new :id
 describe Cachext do
   describe ".multi" do
     it "delegates to Multi" do
-      multi = double("Cachext::Multi")
-      expect(multi).to receive(:fetch).with([1,2,3])
       expect(Cachext::Multi).to receive(:new).
         with(Cachext.config, ["Multirepo"], expires_in: 20).
-        and_return(multi)
+        and_call_original
 
-      Cachext.multi ["Multirepo"], [1,2,3], expires_in: 20 do |ids|
+      expect(Cachext.multi(["Multirepo"], [1,2,3], expires_in: 20) { |ids|
         ids.inject({}) { |acc,id| acc.merge(id => Record.new(id)) }
-      end
+      }).to eq(1 => Record.new(1), 2 => Record.new(2), 3 => Record.new(3))
     end
   end
 end
@@ -30,6 +28,12 @@ describe Cachext::Multi do
   it "returns the found records" do
     expect(subject.fetch [1,2,3] { |ids|
       ids.inject({}) { |acc,id| acc.merge(id => Record.new(id)) }
+    }).to eq({ 1 => Record.new(1), 2 => Record.new(2), 3 => Record.new(3) })
+  end
+
+  it "converts a block that returns an array to a hash by their id" do
+    expect(subject.fetch [1,2,3] { |ids|
+      ids.map { |id| Record.new id }
     }).to eq({ 1 => Record.new(1), 2 => Record.new(2), 3 => Record.new(3) })
   end
 

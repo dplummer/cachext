@@ -39,7 +39,7 @@ module Cachext
     config.redis.del "cachext:*"
   end
 
-  def self.multi klass, ids, options = {}
-    Multi.new(config, klass, options).fetch ids
+  def self.multi klass, ids, options = {}, &block
+    Multi.new(config, klass, options).fetch ids, &block
   end
 end

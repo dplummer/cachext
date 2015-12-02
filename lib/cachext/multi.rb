@@ -96,6 +96,13 @@ module Cachext
 
       def uncached_where ids
         records = @lookup.call ids
+
+        if records.is_a?(Array)
+          records = records.each_with_object({}) do |record, acc|
+            acc[record.id] = record
+          end
+        end
+
         delete_backups ids - records.keys
         records
       rescue *multi.default_errors => e
