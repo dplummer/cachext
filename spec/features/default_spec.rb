@@ -1,7 +1,5 @@
 require 'spec_helper'
 
-FooError = Class.new(StandardError)
-
 describe Cachext::Features::Default do
   let(:cache) { Cachext.config.cache }
 

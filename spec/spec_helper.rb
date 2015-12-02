@@ -10,6 +10,8 @@ require "stringio"
 require "redis"
 require "thread/pool"
 
+FooError = Class.new(StandardError)
+
 class DummyErrorLogger
   def call(_)
   end
