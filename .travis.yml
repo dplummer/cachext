@@ -5,3 +5,6 @@ before_install: gem install bundler -v 1.10.6
 services:
   - memcache
   - redis
+addons:
+  code_climate:
+    repo_token: cb086fed31c856366899aee6853db25d307c6a85c7c67390f7dcd17eb71f2d20
