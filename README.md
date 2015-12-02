@@ -1,5 +1,7 @@
 # Cachext
 
+[![Build Status](https://travis-ci.org/dplummer/cachext.svg)](https://travis-ci.org/dplummer/cachext)
+
 Extensions to normal Rails caching:
 
 * Lock (inspired by https://github.com/seamusabshere/lock_and_cache)
