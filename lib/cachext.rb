@@ -30,6 +30,10 @@ module Cachext
     @client ||= Client.new config
   end
 
+  def self.config=(new_config)
+    @config = new_config
+  end
+
   def self.config
     @config ||= Configuration.new
   end
@@ -41,5 +45,9 @@ module Cachext
 
   def self.multi klass, ids, options = {}, &block
     Multi.new(config, klass, options).fetch ids, &block
+  end
+
+  def self.configure &block
+    @config = Configuration.setup(&block)
   end
 end

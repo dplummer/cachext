@@ -11,8 +11,10 @@ Extensions to normal Rails caching:
 ## Quickstart
 
 ```ruby
-Cachext.config.cache = Rails.cache
-Cachext.config.redis = Redis.current
+Cachext.configure do |config|
+  config.cache = Rails.cache
+  config.redis = Redis.current
+end
 
 key = [:foo, :bar, 1]
 Cachext.fetch key, expires_in: 2.hours, default: "cow" do

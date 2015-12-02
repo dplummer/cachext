@@ -14,6 +14,25 @@ module Cachext
                   :debug,              # output debug messages to STDERR
                   :heartbeat_expires   # time in seconds for process heardbeat to expire
 
+    MissingConfiguration = Class.new(StandardError)
+
+    def self.setup
+      config = new
+      yield config
+
+      if config.cache.nil?
+        raise MissingConfiguration, "Must configure the config.cache. Try config.cache = Rails.cache"
+      end
+
+      if config.redis.nil?
+        raise MissingConfiguration, "Must configure the config.redis. Try config.redis = Redis.current"
+      end
+
+      config.lock_manager
+
+      config
+    end
+
     def initialize
       self.raise_errors = false
       self.default_errors = [
