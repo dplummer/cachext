@@ -8,6 +8,7 @@ class Bar
   def initialize(id)
     @id = id
     @count = 0
+    @mutex = Mutex.new
   end
 
   def key
@@ -15,7 +16,7 @@ class Bar
   end
 
   def unsafe_click
-    Thread.exclusive do
+    @mutex.synchronize do
       raise AlreadyClickedError, "somebody already clicking Bar #{@id}" if $clicking.include?(@id)
       $clicking << @id
     end

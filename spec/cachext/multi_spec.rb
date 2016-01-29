@@ -10,6 +10,7 @@ class MultiBar
   def initialize
     @name = rand
     @ids = []
+    @mutex = Mutex.new
   end
 
   def key_base
@@ -17,7 +18,7 @@ class MultiBar
   end
 
   def unsafe_click(ids)
-    Thread.exclusive do
+    @mutex.synchronize do
       raise AlreadyClickedError, "somebody already multibar_clicking Bar #{@name}" if $multibar_clicking.include?(@name)
       $multibar_clicking << @name
     end
