@@ -1,5 +1,6 @@
 require "redlock"
 require "redis-namespace"
+require "thread"
 
 module Cachext
   class Configuration
@@ -46,6 +47,7 @@ module Cachext
       self.max_lock_wait = 5
       self.debug = ENV['CACHEXT_DEBUG'] == "true"
       self.heartbeat_expires = 2
+      @debug_mutex = Mutex.new
     end
 
     def lock_manager
@@ -58,6 +60,18 @@ module Cachext
 
     def log_errors?
       error_logger.present?
+    end
+
+    def debug
+      if block_given?
+        if @debug
+          @mutex.synchronize do
+            yield
+          end
+        end
+      else
+        @debug
+      end
     end
   end
 end

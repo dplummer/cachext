@@ -37,12 +37,10 @@ module Cachext
       end
 
       def debug_log
-        if @config.debug
-          Thread.exclusive do
-            log = yield
-            msg = log.is_a?(String) ? log : log.inspect
-            $stderr.puts "[#{Time.now.to_s(:db)}] [#{Process.pid} #{Thread.current.object_id.to_s(16)}] #{msg}"
-          end
+        @config.debug do
+          log = yield
+          msg = log.is_a?(String) ? log : log.inspect
+          $stderr.puts "[#{Time.now.to_s(:db)}] [#{Process.pid} #{Thread.current.object_id.to_s(16)}] #{msg}"
         end
       end
     end
