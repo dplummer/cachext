@@ -11,7 +11,7 @@ module Cachext
       @config = config
     end
 
-    def fetch key, options_hash, &block
+    def fetch key, options_hash = {}, &block
       options = Options.new @config, options_hash
 
       retval = read key, options
@@ -41,7 +41,7 @@ module Cachext
 
     def handle_error key, options, error
       @config.error_logger.call error if @config.log_errors?
-      raise if @config.raise_errors && reraise_errors
+      raise if @config.raise_errors && options.reraise_errors
     end
 
     def read key, options
