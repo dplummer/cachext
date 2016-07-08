@@ -56,10 +56,6 @@ class Sleeper
 end
 
 describe Cachext::Features::Lock do
-  before do
-    Cachext.flush
-  end
-
   let(:bar) { Bar.new(rand.to_s) }
 
   it "will raise an error without locking" do

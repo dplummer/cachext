@@ -23,9 +23,10 @@ LOGGER = DummyErrorLogger.new
 
 RSpec.configure do |config|
   config.before do
+    Cachext.config = Cachext::Configuration.new
     Cachext.config.cache = MEMCACHE
     Cachext.config.redis = REDIS
     Cachext.config.error_logger = LOGGER
+    Cachext.flush
   end
 end
-

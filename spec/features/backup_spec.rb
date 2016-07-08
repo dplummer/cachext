@@ -4,10 +4,6 @@ describe Cachext::Features::Backup do
   let(:cache) { Cachext.config.cache }
   let(:error_logger) { Cachext.config.error_logger }
 
-  before do
-    Cachext.flush
-  end
-
   describe "fetch" do
     let(:key) { Cachext::Key.new([:test, 1]) }
     let(:backup_key) { key.backup }

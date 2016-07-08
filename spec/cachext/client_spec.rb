@@ -8,10 +8,6 @@ describe Cachext, "caching" do
   let(:config) { Cachext::Configuration.new }
   subject { Cachext::Client.new config }
 
-  before do
-    Cachext.flush
-  end
-
   let(:key) { Cachext::Key.new [:test, 1] }
 
   it "returns the value of the block" do
