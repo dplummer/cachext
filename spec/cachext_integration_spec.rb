@@ -8,14 +8,8 @@ describe Cachext, "integration" do
 
   context "backup exists, service times out" do
     before do
-      Cachext.flush
-      @old_max = Cachext.config.max_lock_wait
       Cachext.config.max_lock_wait = 0.2
       cache.write backup_key, "old value"
-    end
-
-    after do
-      Cachext.config.max_lock_wait = @old_max
     end
 
     it "returns the backup value" do

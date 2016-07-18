@@ -3,10 +3,6 @@ require 'spec_helper'
 describe Cachext::Features::Default do
   let(:cache) { Cachext.config.cache }
 
-  before do
-    Cachext.flush
-  end
-
   describe "#handle_error" do
     let(:key) { Cachext::Key.new([:test, 1]) }
     let(:backup_key) { key.backup }

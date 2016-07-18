@@ -9,6 +9,7 @@ require "logger"
 require "stringio"
 require "redis"
 require "thread/pool"
+require "timecop"
 
 FooError = Class.new(StandardError)
 
@@ -23,9 +24,15 @@ LOGGER = DummyErrorLogger.new
 
 RSpec.configure do |config|
   config.before do
-    Cachext.config.cache = MEMCACHE
-    Cachext.config.redis = REDIS
-    Cachext.config.error_logger = LOGGER
+    Cachext.configure do |c|
+      c.cache = MEMCACHE
+      c.redis = REDIS
+      c.error_logger = LOGGER
+    end
+    Cachext.flush
+  end
+
+  config.after do
+    Timecop.return
   end
 end
-

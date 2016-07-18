@@ -5,6 +5,7 @@ module Cachext
     prepend Features::DebugLogging
     prepend Features::Lock
     prepend Features::Backup
+    prepend Features::CircuitBreaker
     prepend Features::Default
 
     def initialize config
@@ -45,7 +46,7 @@ module Cachext
     end
 
     def read key, options
-      key.read
+      key.read if options.cache?
     end
 
     def write key, fresh, options

@@ -39,7 +39,7 @@ module Cachext
 
         block.call
       ensure
-        @config.lock_manager.unlock @lock_info
+        @config.lock_manager.unlock @lock_info if @lock_info
         done = true
       end
 
@@ -54,7 +54,7 @@ module Cachext
       end
 
       def wait_for_lock key, start_time
-        sleep rand
+        sleep rand(0..(@config.max_lock_wait / 2))
         if Time.now - start_time > @config.max_lock_wait
           raise TimeoutWaitingForLock
         end

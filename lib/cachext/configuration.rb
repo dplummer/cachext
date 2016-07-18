@@ -13,7 +13,9 @@ module Cachext
                   :not_found_errors,   # array of errors where we delete the backup and reraise
                   :max_lock_wait,      # time in seconds to wait for a lock
                   :debug,              # output debug messages to STDERR
-                  :heartbeat_expires   # time in seconds for process heardbeat to expire
+                  :heartbeat_expires,  # time in seconds for process heardbeat to expire
+                  :failure_threshold,  # Number of tries before tripping circuit breaker
+                  :breaker_timeout     # time in seconds to wait before switching breaker to half-open
 
     MissingConfiguration = Class.new(StandardError)
 
@@ -47,6 +49,7 @@ module Cachext
       self.max_lock_wait = 5
       self.debug = ENV['CACHEXT_DEBUG'] == "true"
       self.heartbeat_expires = 2
+      self.failure_threshold = 3
       @debug_mutex = Mutex.new
     end
 

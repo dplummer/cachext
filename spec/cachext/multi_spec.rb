@@ -61,10 +61,6 @@ describe Cachext::Multi do
   let(:key_base) { ["Multirepo"] }
   subject { Cachext::Multi.new config, key_base, expires_in: 0.1 }
 
-  before do
-    Cachext.flush
-  end
-
   it "returns the found records" do
     expect(subject.fetch [1,2,3] { |ids|
       ids.inject({}) { |acc,id| acc.merge(id => Record.new(id)) }

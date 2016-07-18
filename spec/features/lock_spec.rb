@@ -56,10 +56,6 @@ class Sleeper
 end
 
 describe Cachext::Features::Lock do
-  before do
-    Cachext.flush
-  end
-
   let(:bar) { Bar.new(rand.to_s) }
 
   it "will raise an error without locking" do
@@ -118,7 +114,8 @@ describe Cachext::Features::Lock do
     begin
       old_max = Cachext.config.max_lock_wait
       Cachext.config.max_lock_wait = 0.2
-      expect(Cachext.config.error_logger).to receive(:call).with(kind_of(Cachext::Features::Lock::TimeoutWaitingForLock))
+      expect(Cachext.config.error_logger).
+        to receive(:call).with(kind_of(Cachext::Features::Lock::TimeoutWaitingForLock))
 
       pool.process do
         bar.slow_click

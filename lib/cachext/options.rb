@@ -14,7 +14,8 @@ module Cachext
                    errors: config.default_errors,
                    reraise_errors: true,
                    not_found_error: config.not_found_errors,
-                   heartbeat_expires: config.heartbeat_expires
+                   heartbeat_expires: config.heartbeat_expires,
+                   cache: true
 
       @expires_in = expires_in
       @default = default
@@ -22,6 +23,11 @@ module Cachext
       @reraise_errors = reraise_errors
       @not_found_error = not_found_error
       @heartbeat_expires = heartbeat_expires
+      @cache = cache
+    end
+
+    def cache?
+      @cache
     end
   end
 end
