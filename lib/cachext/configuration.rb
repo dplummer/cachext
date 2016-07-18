@@ -50,6 +50,7 @@ module Cachext
       self.debug = ENV['CACHEXT_DEBUG'] == "true"
       self.heartbeat_expires = 2
       self.failure_threshold = 3
+      self.breaker_timeout = 60
       @debug_mutex = Mutex.new
     end
 
