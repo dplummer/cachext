@@ -2,6 +2,7 @@ require "cachext/version"
 require "faraday/error"
 
 module Cachext
+  autoload :Breaker, "cachext/breaker"
   autoload :Client, "cachext/client"
   autoload :Configuration, "cachext/configuration"
   autoload :Features, "cachext/features"
@@ -40,7 +41,8 @@ module Cachext
 
   def self.flush
     config.cache.clear
-    config.redis.del "cachext:*"
+    keys = config.redis.keys("cachext:*")
+    config.redis.del(*keys) if keys.length > 0
   end
 
   def self.multi klass, ids, options = {}, &block
@@ -49,5 +51,6 @@ module Cachext
 
   def self.configure &block
     @config = Configuration.setup(&block)
+    @client = Client.new @config
   end
 end

@@ -39,7 +39,7 @@ module Cachext
 
         block.call
       ensure
-        @config.lock_manager.unlock @lock_info
+        @config.lock_manager.unlock @lock_info if @lock_info
         done = true
       end
 
