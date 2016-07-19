@@ -129,6 +129,46 @@ describe Cachext::Features::Lock do
     end
   end
 
+  describe "lock wait timeout" do
+    before do
+      @old_max = Cachext.config.max_lock_wait
+      Cachext.config.max_lock_wait = 0.2
+      Cachext.config.raise_errors = true
+    end
+
+    after do
+      Cachext.config.max_lock_wait = @old_max
+    end
+
+    it "raises a timeout if the lock doesn't get released in time" do
+      started = false
+      Thread.new do
+        Cachext.fetch(:foo, cache: false) { started = true; sleep 2 }
+      end
+
+      until started
+        sleep 0.01
+      end
+
+      expect { Cachext.fetch(:foo, cache: false, reraise_errors: true) { :bar } }.
+        to raise_error(Cachext::Features::Lock::TimeoutWaitingForLock)
+    end
+
+    it "does not raise a timeout if it has to wait but not too long" do
+      started = false
+      Thread.new do
+        Cachext.fetch(:foo, cache: false) { started = true; sleep 0.199 }
+      end
+
+      until started
+        sleep 0.01
+      end
+
+      expect(Cachext.fetch(:foo, cache: false, reraise_errors: true) { :bar }).
+        to eq(:bar)
+    end
+  end
+
   context "process dies" do
     let!(:sleeper) { Sleeper.new }
     let(:key) { Cachext::Key.new(sleeper.key) }

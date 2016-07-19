@@ -46,17 +46,21 @@ module Cachext
       def obtain_lock key, options
         start_time = Time.now
 
-        until lock_info = @config.lock_manager.lock(key.digest, (options.heartbeat_expires * 1000).ceil)
-          wait_for_lock key, start_time
+        until lock_info ||= @config.lock_manager.lock(key.digest, (options.heartbeat_expires * 1000).ceil)
+          if wait_for_lock(key, start_time) == :timeout
+            lock_info = @config.lock_manager.lock(key.digest, (options.heartbeat_expires * 1000).ceil)
+            raise TimeoutWaitingForLock unless lock_info
+          end
         end
 
         lock_info
       end
 
       def wait_for_lock key, start_time
-        sleep rand(0..(@config.max_lock_wait / 2))
+        sleep rand(0.01..0.02)
+
         if Time.now - start_time > @config.max_lock_wait
-          raise TimeoutWaitingForLock
+          :timeout
         end
       end
     end
