@@ -8,6 +8,7 @@ Extensions to normal Rails caching:
 
 * Lock (inspired by https://github.com/seamusabshere/lock_and_cache)
 * Backup
+* Circuit breaker
 
 ## Quickstart
 
@@ -119,6 +120,19 @@ Cachext.config.error_logger = nil
 
 If set to an object that responds to call, will `call` with any errors caught.
 
+```ruby
+Cachext.config.failure_threshold = 3
+```
+
+Number of tries before tripping circuit breaker.
+
+```ruby
+Cachext.config.breaker_timeout = 60
+```
+
+Time in seconds to wait before switching breaker to half-open.
+
+
 ## Usage
 
 ```ruby
@@ -129,11 +143,12 @@ Available options:
 
 * `expires_in`: override for the `default_expires_in`, in seconds
 * `default`: object or proc that will be used as the default if no backup is found
-* `errors`: override for the `default_errors` to be caught
-* `reraise_errors`: default `true`, if set to `false` NotFound errors will not
-  be raised
-* `not_found_error`: override for `not_found_errors`
-* `heartbeat_expires`: override for `heartbeat_expires`
+* `errors`: override for the `default_errors`: array of errors to catch and not reraise
+* `reraise_errors`: default `true`, if set to `false` NotFound errors will not be raised
+* `not_found_error`: (override) array of errors where we delete the backup and reraise
+* `heartbeat_expires`: (override) time in seconds for process heardbeat to expire
+* `failure_threshold`: (override) Number of tries before tripping circuit breaker
+* `breaker_timeout`: (override) time in seconds to wait before switching breaker to half-open
 
 ```ruby
 Cachext.multi key_base, ids, options, &block
