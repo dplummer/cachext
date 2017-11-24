@@ -1,6 +1,6 @@
 require "redlock"
-require "redis-namespace"
 require "thread"
+require "faraday/error"
 
 module Cachext
   class Configuration
@@ -59,7 +59,7 @@ module Cachext
     end
 
     def lock_redis
-      @lock_redis ||= Redis::Namespace.new :cachext, redis: redis
+      redis
     end
 
     def log_errors?
@@ -69,7 +69,7 @@ module Cachext
     def debug
       if block_given?
         if @debug
-          @mutex.synchronize do
+          @debug_mutex.synchronize do
             yield
           end
         end

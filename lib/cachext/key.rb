@@ -19,8 +19,12 @@ module Cachext
       [:backup_cache] + raw
     end
 
+    def lock_key
+      "cachext:lock:#{digest}"
+    end
+
     def locked?
-      lock_redis.exists digest
+      lock_redis.exists lock_key
     end
 
     def read

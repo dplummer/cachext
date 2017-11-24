@@ -50,7 +50,7 @@ module Cachext
     end
 
     def write key, fresh, options
-      key.write fresh, expires_in: options.expires_in
+      key.write fresh, expires_in: options.expires_in if options.cache?
     end
   end
 end

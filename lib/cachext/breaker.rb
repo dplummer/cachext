@@ -21,9 +21,9 @@ module Cachext
       end
 
       def increment_failure
-        redis.pipelined do
-          redis.set key_str(:last_failure), Time.now.to_f
-          redis.incr key_str(:monitor)
+        lock_redis.pipelined do
+          lock_redis.set key_str(:last_failure), Time.now.to_f
+          lock_redis.incr key_str(:monitor)
         end
       end
 
@@ -38,7 +38,7 @@ module Cachext
       end
 
       def reset!
-        redis.del key_str(:monitor),
+        lock_redis.del key_str(:monitor),
                   key_str(:health_check),
                   key_str(:last_failure)
       end
@@ -62,27 +62,27 @@ module Cachext
       end
 
       def monitor
-        redis.get(key_str(:monitor)).to_i
+        lock_redis.get(key_str(:monitor)).to_i
       end
 
       def last_failure
-        lf = redis.get key_str(:last_failure)
+        lf = lock_redis.get key_str(:last_failure)
         lf.nil? ? nil : lf.to_f
       end
 
       def health_check
-        redis.get(key_str(:health_check)).to_i
+        lock_redis.get(key_str(:health_check)).to_i
       end
 
       def increment_health_check
-        redis.incr key_str(:health_check)
+        lock_redis.incr key_str(:health_check)
       end
 
       def key_str(name)
-        "#{name}:#{key.raw.map(&:to_s).join(":")}"
+        "cachext:#{name}:#{key.raw.map(&:to_s).join(":")}"
       end
 
-      def redis
+      def lock_redis
         config.lock_redis
       end
     end
