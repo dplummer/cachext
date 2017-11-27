@@ -106,7 +106,7 @@ module Cachext
 
       def lock_key_from_ids(ids)
         key = Key.new multi.key_base + ids
-        key.digest
+        key.lock_key
       end
 
       def write_cache records

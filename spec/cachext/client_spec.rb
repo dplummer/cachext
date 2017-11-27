@@ -1,11 +1,11 @@
 require "spec_helper"
 
-FooError = Class.new(StandardError)
-
 describe Cachext, "caching" do
+  FooError = Class.new(StandardError)
+
   let(:cache) { Cachext.config.cache }
 
-  let(:config) { Cachext::Configuration.new }
+  let(:config) { Cachext.config }
   subject { Cachext::Client.new config }
 
   let(:key) { Cachext::Key.new [:test, 1] }

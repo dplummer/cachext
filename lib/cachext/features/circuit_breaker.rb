@@ -11,7 +11,9 @@ module Cachext
       def read key, options
         circuit = breaker.for(key)
         if circuit.open?
-          key.read_backup
+          val = key.read_backup
+          debug_log { { m: :circuit_open, key: key, msg: "Circuit breaker open, reading from backup", val: val.inspect } }
+          val
         else
           circuit.check_health
           super

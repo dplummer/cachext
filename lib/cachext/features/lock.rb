@@ -19,7 +19,7 @@ module Cachext
       end
 
       def call_block key, options, &block
-        with_heartbeat_extender key.digest, options.heartbeat_expires do
+        with_heartbeat_extender key.lock_key, options.heartbeat_expires do
           super
         end
       end
@@ -46,9 +46,9 @@ module Cachext
       def obtain_lock key, options
         start_time = Time.now
 
-        until lock_info ||= @config.lock_manager.lock(key.digest, (options.heartbeat_expires * 1000).ceil)
+        until lock_info ||= @config.lock_manager.lock(key.lock_key, (options.heartbeat_expires * 1000).ceil)
           if wait_for_lock(key, start_time) == :timeout
-            lock_info = @config.lock_manager.lock(key.digest, (options.heartbeat_expires * 1000).ceil)
+            lock_info = @config.lock_manager.lock(key.lock_key, (options.heartbeat_expires * 1000).ceil)
             raise TimeoutWaitingForLock unless lock_info
           end
         end

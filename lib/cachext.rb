@@ -1,5 +1,4 @@
 require "cachext/version"
-require "faraday/error"
 
 module Cachext
   autoload :Breaker, "cachext/breaker"
@@ -50,7 +49,12 @@ module Cachext
   end
 
   def self.configure &block
+    @config_block = block
     @config = Configuration.setup(&block)
     @client = Client.new @config
+  end
+
+  def self.forked!
+    configure(&@config_block)
   end
 end

@@ -149,6 +149,8 @@ Available options:
 * `heartbeat_expires`: (override) time in seconds for process heardbeat to expire
 * `failure_threshold`: (override) Number of tries before tripping circuit breaker
 * `breaker_timeout`: (override) time in seconds to wait before switching breaker to half-open
+* `cache`: use the first-level cache, defaults to true. If set to false, will always call the
+  fallback, but if an error is raised, will use the last known good value.
 
 ```ruby
 Cachext.multi key_base, ids, options, &block

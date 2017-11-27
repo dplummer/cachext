@@ -1,7 +1,6 @@
 require 'spec_helper'
-
 require 'set'
-$clicking = Set.new
+
 class Bar
   AlreadyClickedError = Class.new(StandardError)
 
@@ -50,12 +49,16 @@ class Sleeper
 
   def poke
     Cachext.fetch(key, heartbeat_expires: 0.5) do
-      sleep
+      sleep 3
     end
   end
 end
 
 describe Cachext::Features::Lock do
+  before do
+    $clicking = Set.new
+  end
+
   let(:bar) { Bar.new(rand.to_s) }
 
   it "will raise an error without locking" do
@@ -141,31 +144,37 @@ describe Cachext::Features::Lock do
     end
 
     it "raises a timeout if the lock doesn't get released in time" do
-      started = false
+      mutex = Mutex.new
+      resource = ConditionVariable.new
       Thread.new do
-        Cachext.fetch(:foo, cache: false) { started = true; sleep 2 }
+        Cachext.fetch(:foo, cache: false) {
+          mutex.synchronize { resource.signal }
+          sleep 2
+        }
       end
 
-      until started
-        sleep 0.01
-      end
+      mutex.synchronize { resource.wait(mutex) }
 
       expect { Cachext.fetch(:foo, cache: false, reraise_errors: true) { :bar } }.
         to raise_error(Cachext::Features::Lock::TimeoutWaitingForLock)
     end
 
     it "does not raise a timeout if it has to wait but not too long" do
-      started = false
-      Thread.new do
-        Cachext.fetch(:foo, cache: false) { started = true; sleep 0.199 }
+      mutex = Mutex.new
+      resource = ConditionVariable.new
+      thread = Thread.new do
+        Cachext.fetch(:foo, cache: false) {
+          mutex.synchronize { resource.signal }
+          sleep 0.1
+          :derp
+        }
       end
 
-      until started
-        sleep 0.01
-      end
+      mutex.synchronize { resource.wait(mutex) }
 
       expect(Cachext.fetch(:foo, cache: false, reraise_errors: true) { :bar }).
         to eq(:bar)
+      expect(thread.value).to eq(:derp)
     end
   end
 
@@ -176,8 +185,9 @@ describe Cachext::Features::Lock do
     it "unlocks" do
       child = nil
       begin
-        child = fork do
+        child = Process.fork do
           Cachext.config.cache = ActiveSupport::Cache::MemCacheStore.new
+          Cachext.config.redis = Redis.new
           sleeper.poke
         end
         sleep 0.1
@@ -194,8 +204,9 @@ describe Cachext::Features::Lock do
     it "pays attention to heartbeats" do
       child = nil
       begin
-        child = fork do
+        child = Process.fork do
           Cachext.config.cache = ActiveSupport::Cache::MemCacheStore.new
+          Cachext.config.redis = Redis.new
           sleeper.poke
         end
         sleep 0.1

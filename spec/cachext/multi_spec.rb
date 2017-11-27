@@ -264,7 +264,7 @@ describe Cachext::Multi do
         child = nil
         begin
           child = fork do
-            Cachext.config.cache = ActiveSupport::Cache::MemCacheStore.new
+            Cachext.forked!
             Cachext.multi([:sleeper], [1,2,3], heartbeat_expires: 0.5) { sleep }
           end
           sleep 0.1
@@ -275,6 +275,7 @@ describe Cachext::Multi do
           expect(key).to_not be_locked # but now it should be cleared because no heartbeat
         ensure
           Process.kill('KILL', child) rescue Errno::ESRCH
+          Process.wait
         end
       end
 
@@ -282,7 +283,7 @@ describe Cachext::Multi do
         child = nil
         begin
           child = fork do
-            Cachext.config.cache = ActiveSupport::Cache::MemCacheStore.new
+            Cachext.forked!
             Cachext.multi([:sleeper], [1,2,3], heartbeat_expires: 0.5) { sleep }
           end
           sleep 0.1
@@ -295,6 +296,7 @@ describe Cachext::Multi do
           expect(key).to be_locked # the other process still has it
         ensure
           Process.kill('TERM', child) rescue Errno::ESRCH
+          Process.wait
         end
       end
     end

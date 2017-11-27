@@ -95,18 +95,14 @@ describe Cachext::Features::CircuitBreaker do
     it "syncs the circuit breaker between processes" do
       STDOUT.sync = true
       Process.fork do
-        Cachext.config.cache = ActiveSupport::Cache::MemCacheStore.new
+        Cachext.forked!
         10.times do
-          Cachext.fetch(:foo, cache: false, errors: [FailsSometimes::BoomError]) { service.expensive_call }
+          Cachext.fetch(:foo2, cache: false, errors: [FailsSometimes::BoomError]) { service.expensive_call }
         end
-        Cachext.config.lock_redis.set "sync", "done"
       end
+      Process.wait
 
-      until Cachext.config.lock_redis.get("sync") == "done"
-        sleep 0.01
-      end
-
-      expect(Cachext.fetch(:foo, cache: false, errors: [FailsSometimes::BoomError]) { service.expensive_call }).
+      expect(Cachext.fetch(:foo2, cache: false, errors: [FailsSometimes::BoomError]) { service.expensive_call }).
         to eq(2) # backup value
     end
   end
