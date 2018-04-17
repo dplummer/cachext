@@ -243,7 +243,7 @@ describe Cachext::Multi do
         Cachext.config.max_lock_wait = 0.2
         expect(Cachext.config.error_logger).
           to receive(:call).with(kind_of(Cachext::Features::Lock::TimeoutWaitingForLock)).
-          twice
+          once
 
         pool.process do
           subject.slow_click [1,2,3]
