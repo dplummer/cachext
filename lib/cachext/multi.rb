@@ -95,10 +95,10 @@ module Cachext
         start_time = Time.now
 
         until lock_info = lock_manager.lock(lock_key, (heartbeat_expires * 1000).ceil)
-          sleep rand
           if Time.now - start_time > max_lock_wait
             raise Features::Lock::TimeoutWaitingForLock
           end
+          sleep rand
         end
 
         lock_info
